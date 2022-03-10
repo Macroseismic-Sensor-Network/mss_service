@@ -1,5 +1,5 @@
 # Ignore the version file.
-lib/mss_dataserver/version.py
+lib/mss_service/version.py
 
 # Ignore compiled python files.
 *.pyc
@@ -28,7 +28,7 @@ build/
 *.bak
 
 # Ignore the egg installation folder.
-mss_dataserver.egg-info/
+mss_service.egg-info/
 
 # Emacs backup and temp files.
 *~
