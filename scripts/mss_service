@@ -1,0 +1,153 @@
+#!/usr/bin/env python3
+
+import datetime
+import getpass
+import logging
+import sys
+
+import click
+import paramiko
+
+import mss_service.core.util
+
+
+
+
+
+@click.group()
+def cli():
+    ''' The command line interface entry point.
+
+    '''
+    # Create the logger instance.
+    logger_name = 'mss_service'
+    logger = logging.getLogger(logger_name)
+    # Set the common log level to debug. The log level is refined for each handler.
+    logger.setLevel('DEBUG')
+
+    # Create a logger logging to stdout. Used for output of warnings and errors.
+    handler = mss_service.core.util.get_logger_stream_handler(log_level = 'INFO')
+    logger.addHandler(handler)
+
+
+@cli.command()
+def check():
+    ''' Check the state of the MSS.
+
+    '''
+    logger_name = 'mss_service.check'
+    logger = logging.getLogger(logger_name)
+    check_state(logger = logger)
+
+
+
+def check_state(logger):
+    mss_host = '192.168.33.1'
+    username = 'mss'
+
+
+    password = getpass.getpass('Password:')
+
+    logger.info("Connecting to the MSS using ssh.")
+    try:
+        ssh = paramiko.SSHClient()
+        ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+        ssh.connect(mss_host,
+                    username = username,
+                    password = password,
+                    look_for_keys = False,
+                    allow_agent = False,
+                    timeout = 2)
+    except Exception:
+        logger.exception("Error connecting to the MSS. Quit program execution.")
+        sys.exit(0)
+
+    logger.info("Successfully connected to the MSS.")
+
+    ssh.close()
+    return
+
+    try:
+        status = {}
+        # Get the serial number.
+        cmd = 'cat /home/mss/config/mss_serial'
+        ssh_stdin, ssh_stdout, ssh_stderr = ssh.exec_command(cmd)
+        status['serial'] = ssh_stdout.readline().strip()
+
+        # Get the mss image version.
+        cmd = 'cat /etc/mss_image_version'
+        ssh_stdin, ssh_stdout, ssh_stderr = ssh.exec_command(cmd)
+        status['image_version'] = ssh_stdout.readline().strip()
+
+        # Get the mss-record package version.
+        cmd = 'apt show python-mssrecord'
+        ssh_stdin, ssh_stdout, ssh_stderr = ssh.exec_command(cmd)
+        for cur_line in ssh_stdout.readlines():
+            cur_line = cur_line.lower().strip()
+            if cur_line.startswith('version'):
+                status['python-mssrecord_version'] = cur_line.split(':')[1].strip()
+
+        # Get the mss-suite package version.
+        cmd = 'apt show mss-suite'
+        ssh_stdin, ssh_stdout, ssh_stderr = ssh.exec_command(cmd)
+        for cur_line in ssh_stdout.readlines():
+            cur_line = cur_line.lower().strip()
+            if cur_line.startswith('version'):
+                status['mss-suite_version'] = cur_line.split(':')[1].strip()
+
+        # Get the mss_record version.
+        cmd = 'cat /usr/lib/python3/dist-packages/mss_record/version.py'
+        ssh_stdin, ssh_stdout, ssh_stderr = ssh.exec_command(cmd)
+        status['mss_record_git_tag'] = ssh_stdout.readline().split('=')[1].strip()
+
+        cmd = 'cat /usr/lib/python3/dist-packages/mss_record/__init__.py | grep __version__'
+        ssh_stdin, ssh_stdout, ssh_stderr = ssh.exec_command(cmd)
+        status['mss_record_version'] = ssh_stdout.readline().split('=')[1].strip().replace('"', '')
+
+        # Get the dali configuration.
+        cmd = 'cat /home/mss/config/dali.ini'
+        ssh_stdin, ssh_stdout, ssh_stderr = ssh.exec_command(cmd)
+        status['dali_config'] = ''.join(ssh_stdout.readlines())
+
+        # Get the configuration file.
+        cmd = 'cat /home/mss/config/mss_record.ini'
+        ssh_stdin, ssh_stdout, ssh_stderr = ssh.exec_command(cmd)
+        status['mss_record_config'] = ''.join(ssh_stdout.readlines())
+
+        # Check if python is available.
+        #python_cmd = '''print("Hallo Stefan.")'''
+        python_cmd = 'import sys\nprint(sys.version_info)'
+        cmd = "python3 -c '" + python_cmd + "'"
+        print(cmd)
+        ssh_stdin, ssh_stdout, ssh_stderr = ssh.exec_command(cmd)
+        status['python'] = ''.join(ssh_stdout.readlines())
+
+        # Check if the mss_record service is running.
+        cmd = 'systemctl status mss_record.service'
+        ssh_stdin, ssh_stdout, ssh_stderr = ssh.exec_command(cmd)
+        status['mss_record.service'] = ''.join(ssh_stdout.readlines())
+
+
+
+        now = datetime.date.today()
+        print('| {year:4d}-{month:02d}-{day:02d} |  | ok | {image_version:s} | {serial:s} | {python_mssrecord_version:s} | {mss_suite_version:s} | {mss_record_version:s} ## {mss_record_git_tag:s} |  |'.format(year = now.year,
+                                                            month = now.month,
+                                                            day = now.day,
+                                                            image_version = status['image_version'],
+                                                            serial = status['serial'],
+                                                            python_mssrecord_version = status['python-mssrecord_version'],
+                                                            mss_suite_version = status['mss-suite_version'],
+                                                            mss_record_version = status['mss_record_version'],
+                                                            mss_record_git_tag = status['mss_record_git_tag']))
+
+        print('\n\ndali configuration:\n' + status['dali_config'])
+        print('\n\nmss_record configuration:\n' + status['mss_record_config'])
+        print('\n\npython:\n' + status['python'])
+        print('\n\nmss_record.service:\n' + status['mss_record.service'])
+
+    finally:
+        ssh.close()
+
+
+if __name__ == '__main__':
+    cli()
