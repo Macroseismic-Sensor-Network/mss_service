@@ -54,6 +54,7 @@ setuptools.setup(name = 'mss_service',
                  scripts           = scripts,
                  package_dir       = {'': 'lib'},
                  packages          = ['mss_service'],
-                 install_requires  = ['paramiko',
-                                      'click'])
+                 install_requires  = ['click',
+                                      'obspy',
+                                      'paramiko'])
 
