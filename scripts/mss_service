@@ -260,12 +260,14 @@ def check_state(logger, save_log = False, n_loglines = 20):
             finally:
                 sftp_client.close()
 
+        logger.info("################ MSS LOG FILE ##############")
+        logger.info("Last mss_record log entries:\n    >>> %s",
+                    '    >>> '.join(mss_state.log.mss_record))
+
+        logger.info("################ SUMMARY ##############")
         logger.info("MSS Service State Summary:\n%s",
                     json.dumps(mss_state.summary,
                                indent = 4))
-
-        logger.info("Last mss_record log entries:\n    >>> %s",
-                    '    >>> '.join(mss_state.log.mss_record))
                     
         
     finally:
