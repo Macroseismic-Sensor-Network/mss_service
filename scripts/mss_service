@@ -176,17 +176,23 @@ def check_state(logger, save_log = False, n_loglines = 20):
         mss_state.summary.serial = mss_serial
         logger.info("Successfully connected to the MSS {serial:s}.".format(serial = mss_serial))
 
-        # Check for NTP.
-        npt_is_working, response = mss_service.core.check.check_ntp(ssh = ssh,
-                                                                    logger = logger)
-        mss_state.summary.ntp_is_working = npt_is_working
-        mss_state.details.ntp_state = response
+        # Check the internet connection
+        net_reachable, response = mss_service.core.check.check_internet_conn(ssh = ssh,
+                                                                             logger = logger)
+        mss_state.summary.net_reachable = net_reachable
+        mss_state.details.network_state = response
 
         # Check for datalink connection.
         datalink_connected, response = mss_service.core.check.check_datalink(ssh = ssh,
                                                                              logger = logger)
         mss_state.summary.datalink_connected = datalink_connected
         mss_state.details.ss_output = response
+        
+        # Check for NTP.
+        npt_is_working, response = mss_service.core.check.check_ntp(ssh = ssh,
+                                                                    logger = logger)
+        mss_state.summary.ntp_is_working = npt_is_working
+        mss_state.details.ntp_state = response
 
         # Check the mss_record service.
         mssr_is_running = mss_service.core.check.check_mss_record_service(ssh = ssh,

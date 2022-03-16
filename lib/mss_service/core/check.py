@@ -83,6 +83,26 @@ def check_ntp(ssh, logger):
     return ntp_is_working, response_list
 
 
+def check_internet_conn(ssh, logger):
+    ''' Check the connection to the internet.
+    '''
+    logger.info("Checking the connection to the internet.")
+    cmd = 'ping -c 1 mss.mertl-research.at'
+    ssh_stdin, ssh_stdout, ssh_stderr = ssh.exec_command(cmd)
+    error_response = "".join(ssh_stderr.readlines()).strip()
+    response = "".join(ssh_stdout.readlines()).strip()
+
+    network_reachable = False
+
+    if error_response or not response:
+        logger.error("Error reaching mss.mertl-research.at using ping:\n{:s}".format(error_response))
+    else:
+        logger.info("Successfull ping to mss.mertl-research.at.")
+        network_reachable = True
+
+    return network_reachable, response
+        
+
 def check_datalink(ssh, logger):
     ''' Check the connection to the datalink server.
     '''
