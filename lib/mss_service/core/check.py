@@ -188,8 +188,11 @@ def check_datafiles(ssh, logger):
         logger.info("Found up-to-date miniseed data. mss_record is writing data files.")
         logger.info("The latest 3 data files:\n%s", ''.join(recent_files))
     else:
-        logger.error("The miniseed data is outdated. mss_record is not writing miniseed data.")
-        logger.info("The latest 3 data files:\n%s", ''.join(recent_files))
+        if recent_files:
+            logger.error("The miniseed data is outdated. mss_record is not writing miniseed data.")
+            logger.info("The latest 3 data files:\n%s", ''.join(recent_files))
+        else:
+            logger.error("No miniseed data files found.")
 
     return data_updated, recent_files
 
